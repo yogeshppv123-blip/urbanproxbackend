@@ -1,6 +1,24 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
+const { db, admin, messager } = require('../config/firebase'); // Import Messaging
+
+// Helper: Send Push Notification
+const sendNotification = async (fcmToken, title, body, data = {}) => {
+  if (!fcmToken) return;
+  try {
+    await messager.send({
+      token: fcmToken,
+      notification: { title, body },
+      data: data, // Custom data for app routing
+      android: { priority: 'high', notification: { sound: 'default' } },
+      apns: { payload: { aps: { sound: 'default' } } }
+    });
+    console.log('🔔 Notification sent:', title);
+  } catch (error) {
+    console.error('❌ Notification Failed:', error.message);
+  }
+};
 
 // Helper function for smart assignment
 // Helper function for smart assignment
@@ -36,6 +54,30 @@ async function assignNextVendor(bookingId, io) {
         location: booking.customerLocation,
         expiresAt: expiresAt.toISOString()
       });
+    }
+
+    // 🔥 Sync to Firebase Firestore (Realtime)
+    try {
+      await db.collection('active_bookings').doc(booking._id.toString()).set({
+        status: booking.status,
+        vendorId: vendorId.toString(),
+        vendorOfferExpiresAt: expiresAt.toISOString(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      // 🔔 Send Push Notification to Vendor
+      const vendor = await Vendor.findById(vendorId);
+      if (vendor && vendor.fcmToken) {
+        await sendNotification(
+          vendor.fcmToken,
+          'New Booking Request! 🚨',
+          `New ${booking.serviceName} job nearby. Tap to accept!`,
+          { bookingId: booking._id.toString(), type: 'new_booking' }
+        );
+      }
+
+    } catch (err) {
+      console.error('🔥 Firestore Sync Error (assignNextVendor):', err.message);
     }
   } catch (error) {
     console.error('assignNextVendor error:', error);
@@ -261,6 +303,22 @@ exports.createBooking = async (req, res, next) => {
     // Fetch updated booking
     const updatedBooking = await Booking.findById(booking._id).populate('vendor');
 
+    // 🔥 Sync initial booking to Firebase
+    try {
+      await db.collection('active_bookings').doc(booking._id.toString()).set({
+        bookingId: booking._id.toString(),
+        customerId: req.user._id.toString(),
+        customerName: user.name || 'Unknown',
+        serviceName: booking.serviceName,
+        status: 'searching_vendor',
+        location: finalCustomerLocation,
+        totalAmount: totalAmount,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (err) {
+      console.error('🔥 Firestore Sync Error (createBooking):', err.message);
+    }
+
     res.status(201).json({ success: true, data: updatedBooking, message: 'Booking created, searching for vendor' });
   } catch (err) {
     console.error('createBooking error:', err);
@@ -331,6 +389,27 @@ exports.vendorResponse = async (req, res, next) => {
       });
 
       res.json({ success: true, data: booking, message: 'Booking accepted' });
+
+      // 🔥 Sync Accept to Firebase
+      try {
+        await db.collection('active_bookings').doc(booking._id.toString()).update({
+          status: 'confirmed',
+          vendorId: req.user._id.toString(),
+          vendorName: req.user.name,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 🔔 Notify User via Push
+        const user = await User.findById(booking.user);
+        if (user && user.fcmToken) {
+          await sendNotification(
+            user.fcmToken,
+            'Vendor Found! 🎉',
+            `${req.user.name} has accepted your ${booking.serviceName} request.`,
+            { bookingId: booking._id.toString(), type: 'booking_accepted' }
+          );
+        }
+      } catch (err) { }
     } else {
       // Reject - Ask user to approve next vendor
       booking.rejectedVendors.push(req.user._id);

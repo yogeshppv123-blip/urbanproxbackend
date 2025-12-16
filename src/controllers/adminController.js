@@ -24,10 +24,30 @@ exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        // Auto-create Master Admin if using default credentials
+        if (email === 'masteradmin@urban.com' && password === 'masteradmin12345') {
+            let master = await Admin.findOne({ email });
+            if (!master) {
+                master = new Admin({
+                    name: 'Master Admin',
+                    email,
+                    role: 'super_admin',
+                    isVerified: true
+                });
+                await master.setPassword(password);
+                await master.save();
+            }
+        }
+
         // Check for admin
         const admin = await Admin.findOne({ email });
 
         if (admin && (await admin.checkPassword(password))) {
+            // Check verification unless master admin
+            if (admin.email !== 'masteradmin@urban.com' && !admin.isVerified) {
+                return res.status(403).json({ success: false, message: 'Account pending approval by Master Admin' });
+            }
+
             res.json({
                 success: true,
                 data: {
@@ -62,7 +82,8 @@ exports.seedAdmin = async (req, res) => {
         const admin = new Admin({
             email,
             name,
-            role: 'super_admin'
+            role: 'super_admin',
+            isVerified: true
         });
 
         await admin.setPassword(password);
@@ -558,6 +579,115 @@ exports.changePassword = async (req, res) => {
         });
     } catch (error) {
         console.error('Change password error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Register new Admin (Pending Approval)
+// @route   POST /api/admin/register
+// @access  Public
+exports.registerAdmin = async (req, res) => {
+    try {
+        const { name, email, password, phone } = req.body;
+
+        const exists = await Admin.findOne({ email });
+        if (exists) {
+            return res.status(400).json({ success: false, message: 'Email already exists' });
+        }
+
+        const admin = new Admin({
+            name,
+            email,
+            phone,
+            role: 'admin',
+            isVerified: false
+        });
+        await admin.setPassword(password);
+        await admin.save();
+
+        res.status(201).json({ success: true, message: 'Request sent to Master Admin for approval' });
+    } catch (error) {
+        console.error('Register admin error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Get Pending Admins
+// @route   GET /api/admin/pending
+// @access  Private (Super Admin)
+exports.getPendingAdmins = async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && req.admin.email !== 'masteradmin@urban.com') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        // Include false or undefined/null
+        const admins = await Admin.find({ isVerified: { $ne: true } }).select('-passwordHash');
+        res.json({ success: true, data: admins });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Get Active Admins
+// @route   GET /api/admin/active
+// @access  Private (Super Admin)
+exports.getActiveAdmins = async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && req.admin.email !== 'masteradmin@urban.com') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        const admins = await Admin.find({ isVerified: true }).select('-passwordHash');
+        res.json({ success: true, data: admins });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Approve Admin
+// @route   PUT /api/admin/:id/approve
+// @access  Private (Super Admin)
+exports.approveAdmin = async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && req.admin.email !== 'masteradmin@urban.com') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        const admin = await Admin.findByIdAndUpdate(req.params.id, { isVerified: true }, { new: true });
+        res.json({ success: true, data: admin });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Delete Admin
+// @route   DELETE /api/admin/admins/:id
+// @access  Private (Super Admin)
+exports.deleteAdmin = async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && req.admin.email !== 'masteradmin@urban.com') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        if (req.params.id === req.admin._id.toString()) {
+            return res.status(400).json({ success: false, message: 'Cannot delete yourself' });
+        }
+        await Admin.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Admin deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// @desc    Update Admin
+// @route   PUT /api/admin/admins/:id
+// @access  Private (Super Admin)
+exports.updateAdmin = async (req, res) => {
+    try {
+        if (req.admin.role !== 'super_admin' && req.admin.email !== 'masteradmin@urban.com') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        const { name, phone, email } = req.body;
+        const admin = await Admin.findByIdAndUpdate(req.params.id, { name, phone, email }, { new: true }).select('-passwordHash');
+        res.json({ success: true, data: admin });
+    } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

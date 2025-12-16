@@ -44,7 +44,9 @@ const {
     getCountryCodes,
     createCountryCode,
     updateCountryCode,
-    deleteCountryCode
+    deleteCountryCode,
+    getWebContent,
+    updateWebContent
 } = require('../controllers/contentController');
 const { protectAdmin } = require('../middleware/adminAuth');
 
@@ -100,5 +102,9 @@ router.get('/country-codes', getCountryCodes);
 router.post('/country-codes', protectAdmin, createCountryCode);
 router.put('/country-codes/:id', protectAdmin, updateCountryCode);
 router.delete('/country-codes/:id', protectAdmin, deleteCountryCode);
+
+// Web Content routes
+router.get('/web-content', getWebContent);
+router.put('/web-content', protectAdmin, updateWebContent);
 
 module.exports = router;

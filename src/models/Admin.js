@@ -30,6 +30,10 @@ const adminSchema = new mongoose.Schema({
         enum: ['super_admin', 'admin', 'support'],
         default: 'admin'
     },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

@@ -31,3 +31,8 @@ coverage/
 # Production
 dist/
 build/
+
+# Secrets
+service-account.json
+service-account.json.json
+

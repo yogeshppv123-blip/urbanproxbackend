@@ -7,6 +7,7 @@ const Payout = require('../models/Payout');
 const Notification = require('../models/Notification');
 const Testimonial = require('../models/Testimonial');
 const CountryCode = require('../models/CountryCode');
+const WebContent = require('../models/WebContent');
 
 // ============ CATEGORY MANAGEMENT ============
 
@@ -561,6 +562,50 @@ exports.deleteCountryCode = async (req, res) => {
         await CountryCode.findByIdAndDelete(req.params.id);
         res.json({ success: true, data: {} });
     } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+// ============ WEB CONTENT MANAGEMENT ============
+
+exports.getWebContent = async (req, res) => {
+    try {
+        const { page } = req.query;
+        let content = await WebContent.findOne({ page: page || 'home' });
+
+        if (!content) {
+            // Create default if not exists
+            content = await WebContent.create({ page: page || 'home' });
+        }
+
+        res.json({ success: true, data: content });
+    } catch (error) {
+        console.error('Get web content error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.updateWebContent = async (req, res) => {
+    try {
+        let content;
+        if (req.params.id) {
+            content = await WebContent.findByIdAndUpdate(
+                req.params.id,
+                req.body,
+                { new: true, runValidators: true, upsert: true }
+            );
+        } else {
+            const page = req.body.page || 'home';
+            content = await WebContent.findOneAndUpdate(
+                { page: page },
+                req.body,
+                { new: true, runValidators: true, upsert: true }
+            );
+        }
+
+        res.json({ success: true, data: content });
+    } catch (error) {
+        console.error('Update web content error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

@@ -17,12 +17,19 @@ const {
     deleteService,
     updateProfile,
     uploadProfilePhoto,
-    changePassword
+    changePassword,
+    registerAdmin,
+    getPendingAdmins,
+    getActiveAdmins,
+    approveAdmin,
+    deleteAdmin,
+    updateAdmin
 } = require('../controllers/adminController');
 const { protectAdmin } = require('../middleware/adminAuth');
 
 // Auth routes
 router.post('/login', login);
+router.post('/register', registerAdmin);
 router.post('/seed', seedAdmin);
 router.get('/me', protectAdmin, getMe);
 
@@ -30,6 +37,13 @@ router.get('/me', protectAdmin, getMe);
 router.put('/profile', protectAdmin, updateProfile);
 router.post('/profile/photo', protectAdmin, uploadProfilePhoto);
 router.put('/password', protectAdmin, changePassword);
+
+// Admin Management (Master Admin)
+router.get('/admins/pending', protectAdmin, getPendingAdmins);
+router.get('/admins/active', protectAdmin, getActiveAdmins);
+router.put('/admins/:id/approve', protectAdmin, approveAdmin);
+router.put('/admins/:id', protectAdmin, updateAdmin);
+router.delete('/admins/:id', protectAdmin, deleteAdmin);
 
 // Dashboard
 router.get('/dashboard/stats', protectAdmin, getDashboardStats);

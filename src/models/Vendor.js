@@ -38,6 +38,7 @@ const VendorSchema = new mongoose.Schema(
     profileImage: { type: String },
     isOnline: { type: Boolean, default: false },
     notificationsEnabled: { type: Boolean, default: true },
+    fcmToken: { type: String }, // For Push Notifications
 
     // Rating & Performance
     avgRating: { type: Number, default: 5 },

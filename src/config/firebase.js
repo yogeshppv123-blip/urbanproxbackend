@@ -1,35 +1,25 @@
 const admin = require('firebase-admin');
+const path = require('path');
 
-// Load service account from environment variable or file (for local dev)
-let serviceAccount;
+// Path to your downloaded service account key
+const serviceAccountPath = path.join(__dirname, '../../service-account.json.json');
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Production: Parse from environment variable
-    try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        console.log('✅ Firebase credentials loaded from environment variable');
-    } catch (error) {
-        console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env variable:', error.message);
-        throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT format');
-    }
-} else {
-    // Development: Load from local file
-    try {
-        serviceAccount = require('./firebase-service-account.json');
-        console.log('✅ Firebase credentials loaded from local file (dev mode)');
-    } catch (error) {
-        console.error('❌ Firebase service account not found. Set FIREBASE_SERVICE_ACCOUNT env variable or add firebase-service-account.json');
-        throw error;
-    }
+try {
+    const serviceAccount = require(serviceAccountPath);
+
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+
+    console.log('🔥 Firebase Admin Initialized Successfully');
+} catch (error) {
+    console.error('❌ Firebase Init Error:', error.message);
+    // We don't crash the app if firebase fails, just log it
 }
 
-// Initialize Firebase Admin
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: process.env.FIREBASE_PROJECT_ID || 'urbanprox-7aa0d'
-});
+const db = admin.firestore();
+// If using a custom database name, specify it:
+db.settings({ databaseId: 'default' });
+const messager = admin.messaging();
 
-// Export auth instance
-const auth = admin.auth();
-
-module.exports = { admin, auth };
+module.exports = { admin, db, messager };

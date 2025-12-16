@@ -25,6 +25,20 @@ app.get('/', (req, res) => {
   res.json({ message: 'Urbanvendor API is running' });
 });
 
+// 🔥 Test Firebase Connection
+app.get('/api/test-firebase', async (req, res) => {
+  try {
+    const { db, admin } = require('./config/firebase');
+    await db.collection('test_collection').doc('test_doc').set({
+      message: 'Firebase is working!',
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ success: true, message: 'Firebase write successful! Check Firestore console.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.use('/api', routes);
 
 app.use(notFound);
