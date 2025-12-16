@@ -39,6 +39,7 @@ router.post('/profile/photo', protectAdmin, uploadProfilePhoto);
 router.put('/password', protectAdmin, changePassword);
 
 // Admin Management (Master Admin)
+// Route used by Admin Panel: /api/admin/admins/pending
 router.get('/admins/pending', protectAdmin, getPendingAdmins);
 router.get('/admins/active', protectAdmin, getActiveAdmins);
 router.put('/admins/:id/approve', protectAdmin, approveAdmin);
