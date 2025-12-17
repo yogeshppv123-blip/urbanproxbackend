@@ -225,7 +225,7 @@ const seedCategories = async () => {
                         price: 699,
                         children: [
                             { name: 'Facial', image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800', price: 599, duration: 60 },
-                            { name: 'Cleanup', image: 'https://images.unsplash.com/photo-1596178060810-7d1f4d3c6a85?w=800', price: 399, duration: 30 },
+                            { name: 'Cleanup', image: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800', price: 399, duration: 30 },
                             { name: 'Bleach', image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800', price: 299, duration: 30 }
                         ]
                     },
@@ -236,7 +236,7 @@ const seedCategories = async () => {
                         children: [
                             { name: 'Party Makeup', image: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=800', price: 1999, duration: 90 },
                             { name: 'Bridal Makeup', image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800', price: 4999, duration: 180 },
-                            { name: 'HD Makeup', image: 'https://images.unsplash.com/photo-1596178060810-7d1f4d3c6a85?w=800', price: 2499, duration: 120 }
+                            { name: 'HD Makeup', image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800', price: 2499, duration: 120 }
                         ]
                     }
                 ]
@@ -248,13 +248,13 @@ const seedCategories = async () => {
                 subCategories: [
                     {
                         name: 'Hair Services',
-                        image: 'https://images.unsplash.com/photo-1593702295094-aea8c5c13d79?w=800',
+                        image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800',
                         price: 199,
                         children: [
                             { name: 'Hair Cut', image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800', price: 149, duration: 30 },
                             { name: 'Beard Trim', image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800', price: 99, duration: 20 },
-                            { name: 'Shaving', image: 'https://images.unsplash.com/photo-1593702295094-aea8c5c13d79?w=800', price: 149, duration: 20 },
-                            { name: 'Hair Color', image: 'https://images.unsplash.com/photo-1622286346003-c3d0e6c0e98c?w=800', price: 799, duration: 45 }
+                            { name: 'Shaving', image: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800', price: 149, duration: 20 },
+                            { name: 'Hair Color', image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=800', price: 799, duration: 45 }
                         ]
                     },
                     {
@@ -279,9 +279,9 @@ const seedCategories = async () => {
                         image: 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800',
                         price: 599,
                         children: [
-                            { name: 'Cockroach Control', image: 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800', price: 499, duration: 45 },
-                            { name: 'Ant Control', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800', price: 399, duration: 45 },
-                            { name: 'Mosquito Control', image: 'https://plus.unsplash.com/premium_photo-1682145181711-27b3225883d6?w=800', price: 599, duration: 60 }
+                            { name: 'Cockroach Control', image: 'https://images.unsplash.com/photo-1632935190508-8f4a3da9f447?w=800', price: 499, duration: 45 },
+                            { name: 'Ant Control', image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=800', price: 399, duration: 45 },
+                            { name: 'Mosquito Control', image: 'https://images.unsplash.com/photo-1632323094858-d7b76afbb5a1?w=800', price: 599, duration: 60 }
                         ]
                     },
                     {
@@ -289,9 +289,9 @@ const seedCategories = async () => {
                         image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800',
                         price: 999,
                         children: [
-                            { name: 'Termite Control', image: 'https://images.unsplash.com/photo-1587574293340-e0011c4e8ecf?w=800', price: 1499, duration: 120 },
-                            { name: 'Bed Bug Control', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800', price: 1299, duration: 90 },
-                            { name: 'Rodent Control', image: 'https://plus.unsplash.com/premium_photo-1682145181711-27b3225883d6?w=800', price: 899, duration: 60 }
+                            { name: 'Termite Control', image: 'https://images.unsplash.com/photo-1632935190508-8f4a3da9f447?w=800', price: 1499, duration: 120 },
+                            { name: 'Bed Bug Control', image: 'https://images.unsplash.com/photo-1631729371254-42c2892f0e6e?w=800', price: 1299, duration: 90 },
+                            { name: 'Rodent Control', image: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800', price: 899, duration: 60 }
                         ]
                     }
                 ]
@@ -314,10 +314,10 @@ const seedCategories = async () => {
                     },
                     {
                         name: 'Interior Cleaning',
-                        image: 'https://images.unsplash.com/photo-1605164666955-832d6d459ed5?w=800',
+                        image: 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?w=800',
                         price: 499,
                         children: [
-                            { name: 'Vacuum Cleaning', image: 'https://images.unsplash.com/photo-1605164666955-832d6d459ed5?w=800', price: 299, duration: 30 },
+                            { name: 'Vacuum Cleaning', image: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=800', price: 299, duration: 30 },
                             { name: 'Seat Dry Cleaning', image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=800', price: 699, duration: 60 },
                             { name: 'Dashboard Polishing', image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800', price: 399, duration: 30 }
                         ]
@@ -341,31 +341,31 @@ const seedCategories = async () => {
                 subCategories: [
                     {
                         name: 'Wash & Iron',
-                        image: 'https://images.unsplash.com/photo-1517677208171-0bc12dd9aee5?w=800',
+                        image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800',
                         price: 149,
                         children: [
                             { name: 'Regular Clothes', image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=800', price: 99, duration: 48 },
-                            { name: 'Premium Clothes', image: 'https://images.unsplash.com/photo-1517677208171-0bc12dd9aee5?w=800', price: 199, duration: 48 },
-                            { name: 'Delicate Clothes', image: 'https://images.unsplash.com/photo-1489274495757-95c7c83700c0?w=800', price: 249, duration: 48 },
+                            { name: 'Premium Clothes', image: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=800', price: 199, duration: 48 },
+                            { name: 'Delicate Clothes', image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800', price: 249, duration: 48 },
                             { name: 'Curtains', image: 'https://images.unsplash.com/photo-1567113463300-102a7eb3cb26?w=800', price: 399, duration: 48 }
                         ]
                     },
                     {
                         name: 'Dry Cleaning',
-                        image: 'https://images.unsplash.com/photo-1489274495757-95c7c83700c0?w=800',
+                        image: 'https://images.unsplash.com/photo-1585659722983-3a675dabf23d?w=800',
                         price: 299,
                         children: [
-                            { name: 'Suit Dry Clean', image: 'https://images.unsplash.com/photo-1489274495757-95c7c83700c0?w=800', price: 399, duration: 72 },
+                            { name: 'Suit Dry Clean', image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800', price: 399, duration: 72 },
                             { name: 'Saree Dry Clean', image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=800', price: 299, duration: 72 },
-                            { name: 'Jacket Dry Clean', image: 'https://images.unsplash.com/photo-1517677208171-0bc12dd9aee5?w=800', price: 349, duration: 72 }
+                            { name: 'Jacket Dry Clean', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800', price: 349, duration: 72 }
                         ]
                     },
                     {
                         name: 'Shoe Laundry',
-                        image: 'https://images.unsplash.com/photo-1605651202724-9b4dc8071178?w=800',
+                        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
                         price: 199,
                         children: [
-                            { name: 'Sports Shoes', image: 'https://images.unsplash.com/photo-1605651202724-9b4dc8071178?w=800', price: 149, duration: 48 },
+                            { name: 'Sports Shoes', image: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800', price: 149, duration: 48 },
                             { name: 'Leather Shoes', image: 'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=800', price: 199, duration: 48 },
                             { name: 'Canvas Shoes', image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800', price: 129, duration: 48 }
                         ]
@@ -482,12 +482,12 @@ const seedCategories = async () => {
                 subCategories: [
                     {
                         name: 'Automation Setup',
-                        image: 'https://images.unsplash.com/photo-1558002038-1091a166111c?w=800',
+                        image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800',
                         price: 1499,
                         children: [
                             { name: 'Smart Lighting Setup', image: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800', price: 999, duration: 60 },
                             { name: 'Smart Plug Installation', image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800', price: 499, duration: 30 },
-                            { name: 'Voice Assistant Setup', image: 'https://images.unsplash.com/photo-1558002038-1091a166111c?w=800', price: 799, duration: 45 }
+                            { name: 'Voice Assistant Setup', image: 'https://images.unsplash.com/photo-1543512214-318c7553f230?w=800', price: 799, duration: 45 }
                         ]
                     },
                     {
@@ -496,8 +496,8 @@ const seedCategories = async () => {
                         price: 2999,
                         children: [
                             { name: 'CCTV Installation', image: 'https://images.unsplash.com/photo-1557324232-b8917d3c3dcb?w=800', price: 3999, duration: 120 },
-                            { name: 'Video Doorbell Installation', image: 'https://images.unsplash.com/photo-1558002038-1091a166111c?w=800', price: 1999, duration: 60 },
-                            { name: 'Smart Lock Installation', image: 'https://images.unsplash.com/photo-1595846519845-68e298c2edd8?w=800', price: 1499, duration: 60 }
+                            { name: 'Video Doorbell Installation', image: 'https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=800', price: 1999, duration: 60 },
+                            { name: 'Smart Lock Installation', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800', price: 1499, duration: 60 }
                         ]
                     },
                     {

@@ -50,8 +50,12 @@ async function assignNextVendor(bookingId, io) {
         bookingId: booking._id,
         serviceName: booking.serviceName,
         customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        customerAddress: booking.customerLocation ? booking.customerLocation.address : '',
         amount: booking.totalAmount,
         location: booking.customerLocation,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
         expiresAt: expiresAt.toISOString()
       });
     }
@@ -179,10 +183,28 @@ exports.getCompletedBookings = async (req, res, next) => {
       Booking.countDocuments(query),
     ]);
 
+    // Hide user details for vendors if service is completed
+    const processedItems = items.map(booking => {
+      const bookingObj = booking.toObject();
+      if (req.role === 'vendor' && bookingObj.detailsHiddenFromVendor) {
+        // Keep name, hide phone and address
+        bookingObj.customerPhone = '**********';
+        if (bookingObj.customerLocation) {
+          bookingObj.customerLocation = {
+            address: 'Service completed',
+            city: '',
+            state: '',
+            pincode: ''
+          };
+        }
+      }
+      return bookingObj;
+    });
+
     res.json({
       success: true,
       data: {
-        data: items,
+        data: processedItems,
         total,
         page,
         limit,
@@ -238,7 +260,11 @@ exports.createBooking = async (req, res, next) => {
     // Construct customerLocation
     let finalCustomerLocation = {};
     if (reqLocation) {
-      finalCustomerLocation = reqLocation;
+      finalCustomerLocation = { ...reqLocation };
+      // Override address if provided explicitly string
+      if (typeof address === 'string' && address.trim().length > 0) {
+        finalCustomerLocation.address = address;
+      }
     } else if (typeof address === 'string') {
       finalCustomerLocation = {
         address: address,
@@ -275,6 +301,9 @@ exports.createBooking = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'No verified vendors available at the moment' });
     }
 
+    // Generate random 6-digit OTP for service completion verification
+    const completionOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
     const booking = await Booking.create({
       user: req.user._id,
       // vendor: candidateIds[0], // Will be set by assignNextVendor
@@ -293,7 +322,8 @@ exports.createBooking = async (req, res, next) => {
       totalAmount,
       status: 'searching_vendor', // Initial status
       paymentMethod: paymentMethod || 'cod',
-      paymentStatus: paymentStatus || 'pending'
+      paymentStatus: paymentStatus || 'pending',
+      completionOtp: completionOtp, // Store OTP for service completion
     });
 
     // Trigger assignment
@@ -609,6 +639,106 @@ exports.addCustomerSignature = async (req, res, next) => {
     }
 
     res.json({ success: true, data: booking, message: 'Customer signature saved' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/bookings/:id/otp - User retrieves their OTP
+exports.getBookingOtp = async (req, res, next) => {
+  try {
+    // Only users can get OTP
+    if (req.role !== 'user') {
+      return res.status(403).json({ success: false, message: 'Only users can retrieve OTP' });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    }).select('+completionOtp');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Only show OTP for active bookings
+    const activeStatuses = ['pending', 'accepted', 'confirmed', 'on_the_way', 'arrived', 'work_started', 'waiting_vendor_response'];
+    if (!activeStatuses.includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'OTP is only available for active bookings' });
+    }
+
+    // Create short booking ID from last 6 characters
+    const shortBookingId = booking._id.toString().slice(-6).toUpperCase();
+
+    res.json({
+      success: true,
+      data: {
+        otp: booking.completionOtp,
+        bookingId: shortBookingId,
+        fullBookingId: booking._id
+      },
+      message: 'OTP retrieved successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/bookings/:id/verify-otp - Vendor verifies OTP to complete service
+exports.verifyCompletionOtp = async (req, res, next) => {
+  try {
+    // Only vendors can verify OTP
+    if (req.role !== 'vendor') {
+      return res.status(403).json({ success: false, message: 'Only vendors can verify OTP' });
+    }
+
+    const { otp } = req.body;
+
+    if (!otp || otp.length !== 6) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid 6-digit OTP' });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      vendor: req.user._id
+    }).select('+completionOtp');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Check if booking can be completed
+    const completableStatuses = ['accepted', 'confirmed', 'on_the_way', 'arrived', 'work_started'];
+    if (!completableStatuses.includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'This booking cannot be completed at this stage' });
+    }
+
+    // Verify OTP
+    if (booking.completionOtp !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP. Please check and try again.' });
+    }
+
+    // OTP verified! Complete the service
+    booking.status = 'work_completed';
+    booking.otpVerifiedAt = new Date();
+    booking.detailsHiddenFromVendor = true; // Hide user details after completion
+    await booking.save();
+
+    // Notify user via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.user}`).emit('service_completed', {
+        bookingId: booking._id,
+        serviceName: booking.serviceName,
+        message: 'Your service has been completed!'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: booking,
+      message: 'Service completed successfully!'
+    });
   } catch (err) {
     next(err);
   }

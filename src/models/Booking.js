@@ -61,6 +61,19 @@ const BookingSchema = new mongoose.Schema(
       enum: ['pending', 'paid', 'failed', 'refunded'],
       default: 'pending',
     },
+
+    // OTP Verification for Service Completion
+    completionOtp: {
+      type: String,
+      select: false, // Don't return by default for security
+    },
+    otpVerifiedAt: {
+      type: Date,
+    },
+    detailsHiddenFromVendor: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

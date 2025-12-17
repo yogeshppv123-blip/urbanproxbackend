@@ -27,4 +27,8 @@ router.post('/:id/signature', bookingController.addCustomerSignature);
 router.post('/:id/vendor-response', bookingController.vendorResponse);
 router.post('/:id/user-approval', bookingController.userApproval);
 
+// OTP Verification Routes
+router.get('/:id/otp', bookingController.getBookingOtp);           // User gets OTP
+router.post('/:id/verify-otp', bookingController.verifyCompletionOtp); // Vendor verifies OTP
+
 module.exports = router;
