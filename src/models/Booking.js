@@ -62,6 +62,12 @@ const BookingSchema = new mongoose.Schema(
       default: 'pending',
     },
 
+    // Lifecycle Timestamps
+    acceptedAt: Date,
+    startedAt: Date,
+    completedAt: Date,
+    arrivedAt: Date,
+
     // OTP Verification for Service Completion
     completionOtp: {
       type: String,

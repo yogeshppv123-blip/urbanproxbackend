@@ -20,7 +20,7 @@ const seedCategories = async () => {
                 subCategories: [
                     {
                         name: 'Deep Cleaning',
-                        image: 'https://images.unsplash.com/photo-1527515673510-813d31923299?w=800',
+                        image: 'https://images.unsplash.com/photo-1581578731117-104f8a746950?w=800',
                         price: 799,
                         children: [
                             { name: 'Kitchen Deep Clean', image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800', price: 699, duration: 90 },

@@ -558,6 +558,12 @@ exports.updateBookingStatus = async (req, res, next) => {
       update.vendorLocation = location;
     }
 
+    // Set Lifecycle Timestamps
+    const now = new Date();
+    if (status === 'work_started') update.startedAt = now;
+    if (status === 'arrived') update.arrivedAt = now;
+    if (status === 'on_the_way') update.onTheWayAt = now; // Optional if schema supported
+
     const booking = await Booking.findOneAndUpdate(
       { _id: req.params.id, vendor: req.user._id },
       update,
@@ -567,6 +573,41 @@ exports.updateBookingStatus = async (req, res, next) => {
     if (!booking) {
       res.status(404);
       return res.json({ success: false, data: null, message: 'Booking not found' });
+    }
+
+    // 🔔 Send Notifications
+    try {
+      const io = req.app.get('io');
+      const user = await User.findById(booking.user);
+
+      let title, body;
+      if (status === 'on_the_way') {
+        title = 'Vendor is On The Way 🚚';
+        body = `${req.user.name} is on the way to your location.`;
+      } else if (status === 'arrived') {
+        title = 'Vendor Arrived 📍';
+        body = `${req.user.name} has arrived at your location.`;
+      } else if (status === 'work_started') {
+        title = 'Job Started 🛠️';
+        body = `Your ${booking.serviceName} service has started.`;
+      }
+
+      if (title && body) {
+        // Socket
+        if (io) io.to(`user_${booking.user}`).emit('booking_status_update', {
+          bookingId: booking._id,
+          status,
+          title,
+          body
+        });
+
+        // Push
+        if (user && user.fcmToken) {
+          await sendNotification(user.fcmToken, title, body, { bookingId: booking._id.toString(), type: 'status_update' });
+        }
+      }
+    } catch (notifyErr) {
+      console.error('Notification error in updateBookingStatus:', notifyErr);
     }
 
     res.json({ success: true, data: booking, message: 'Status updated' });
@@ -721,18 +762,32 @@ exports.verifyCompletionOtp = async (req, res, next) => {
     // OTP verified! Complete the service
     booking.status = 'work_completed';
     booking.otpVerifiedAt = new Date();
+    booking.completedAt = new Date(); // Sync with lifecycle timestamp
     booking.detailsHiddenFromVendor = true; // Hide user details after completion
     await booking.save();
 
     // Notify user via socket
     const io = req.app.get('io');
     if (io) {
-      io.to(`user_${booking.user}`).emit('service_completed', {
+      io.to(`user_${booking.user}`).emit('booking_completed', {
         bookingId: booking._id,
         serviceName: booking.serviceName,
         message: 'Your service has been completed!'
       });
     }
+
+    // 🔔 Send Push Notification
+    try {
+      const user = await User.findById(booking.user);
+      if (user && user.fcmToken) {
+        await sendNotification(
+          user.fcmToken,
+          'Service Completed ✅',
+          `Your ${booking.serviceName} service has been completed successfully.`,
+          { bookingId: booking._id.toString(), type: 'booking_completed' }
+        );
+      }
+    } catch (err) { }
 
     res.json({
       success: true,
