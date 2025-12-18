@@ -37,6 +37,10 @@ const adminSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    totalRevenue: {
+        type: Number,
+        default: 0
     }
 });
 

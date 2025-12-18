@@ -57,6 +57,9 @@ const VendorSchema = new mongoose.Schema(
 
     services: { type: Array, default: [] },
     workingHours: { type: Object, default: {} },
+    todayEarnings: { type: Number, default: 0 }, // Reset nightly via cron/job
+    totalEarnings: { type: Number, default: 0 },
+    walletBalance: { type: Number, default: 0 },
     location: LocationSchema,
     kyc: KYCSchema,
     bankDetails: BankDetailsSchema,

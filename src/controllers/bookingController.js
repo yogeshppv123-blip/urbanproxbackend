@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
+const Notification = require('../models/Notification');
 const { db, admin, messager } = require('../config/firebase'); // Import Messaging
 
 // Helper: Send Push Notification
@@ -163,12 +164,7 @@ exports.getCompletedBookings = async (req, res, next) => {
 
     let query = {};
     if (req.role === 'vendor') {
-      query = {
-        $or: [
-          { vendor: req.user._id, status: { $in: pastStatuses } },
-          { rejectedVendors: req.user._id }
-        ]
-      };
+      query = { vendor: req.user._id, status: { $in: pastStatuses } };
     } else {
       query = { user: req.user._id, status: { $in: pastStatuses } };
     }
@@ -312,7 +308,7 @@ exports.createBooking = async (req, res, next) => {
       customerName: user.name || 'Unknown User',
       customerPhone: user.phone,
       customerLocation: finalCustomerLocation,
-      serviceName: items && items.length > 0 ? items[0].name : 'Service',
+      serviceName: req.body.serviceName || (items && items.length > 0 ? items[0].name : 'Service'),
       serviceId,
       items,
       scheduledDate: scheduledDate || date,
@@ -590,10 +586,24 @@ exports.updateBookingStatus = async (req, res, next) => {
       } else if (status === 'work_started') {
         title = 'Job Started 🛠️';
         body = `Your ${booking.serviceName} service has started.`;
+      } else if (status === 'cancelled') {
+        title = 'Booking Cancelled ❌';
+        body = `${req.user.name} has cancelled the booking.`;
       }
 
       if (title && body) {
-        // Socket
+        // 1. Save In-App Notification (Persistent)
+        await Notification.create({
+          recipient: booking.user,
+          recipientModel: 'User',
+          title,
+          message: body,
+          body,
+          type: 'booking',
+          data: { bookingId: booking._id, type: 'status_update' }
+        });
+
+        // 2. Socket
         if (io) io.to(`user_${booking.user}`).emit('booking_status_update', {
           bookingId: booking._id,
           status,
@@ -601,7 +611,7 @@ exports.updateBookingStatus = async (req, res, next) => {
           body
         });
 
-        // Push
+        // 3. Push
         if (user && user.fcmToken) {
           await sendNotification(user.fcmToken, title, body, { bookingId: booking._id.toString(), type: 'status_update' });
         }
@@ -766,6 +776,30 @@ exports.verifyCompletionOtp = async (req, res, next) => {
     booking.detailsHiddenFromVendor = true; // Hide user details after completion
     await booking.save();
 
+    // Update Vendor Stats (Earnings & Jobs)
+    try {
+      const Admin = require('../models/Admin');
+      const vendor = await Vendor.findById(req.user._id);
+
+      if (vendor) {
+        const amount = Number(booking.totalAmount) || 0;
+        const commission = amount * 0.20;
+        const netEarnings = amount - commission;
+
+        vendor.totalJobs = (vendor.totalJobs || 0) + 1;
+        vendor.totalEarnings = (vendor.totalEarnings || 0) + amount; // Gross Sales
+        vendor.walletBalance = (vendor.walletBalance || 0) + netEarnings; // Net Income
+        vendor.todayEarnings = (vendor.todayEarnings || 0) + netEarnings;
+
+        await vendor.save();
+
+        // Update Admin Revenue
+        await Admin.updateMany({}, { $inc: { totalRevenue: commission } });
+      }
+    } catch (updateErr) {
+      console.error('Error updating vendor/admin stats:', updateErr);
+    }
+
     // Notify user via socket
     const io = req.app.get('io');
     if (io) {
@@ -794,6 +828,74 @@ exports.verifyCompletionOtp = async (req, res, next) => {
       data: booking,
       message: 'Service completed successfully!'
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/bookings/:id/cancel
+exports.cancelBookingByUser = async (req, res, next) => {
+  try {
+    const booking = await Booking.findOne({ _id: req.params.id, user: req.user._id });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Check 5-minute window
+    const diff = Date.now() - new Date(booking.createdAt).getTime();
+    const MINUTES_5 = 5 * 60 * 1000;
+
+    if (diff > MINUTES_5) {
+      return res.status(400).json({ success: false, message: 'Cancellation window (5 minutes) has expired' });
+    }
+
+    // Check if status allows cancelling
+    if (['work_completed', 'cancelled', 'cancelled_by_user', 'work_started'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'Cannot cancel this booking' });
+    }
+
+    booking.status = 'cancelled_by_user';
+    await booking.save();
+
+    // 🔔 Notify Vendor if assigned
+    if (booking.vendor) {
+      try {
+        // 1. Save In-App Notification (Persistent)
+        await Notification.create({
+          recipient: booking.vendor,
+          recipientModel: 'Vendor',
+          title: 'Booking Cancelled ❌',
+          message: `The user has cancelled booking #${booking._id.toString().slice(-6)}`,
+          body: `The user has cancelled booking #${booking._id.toString().slice(-6)}`,
+          type: 'booking',
+          data: { bookingId: booking._id, type: 'booking_cancelled' }
+        });
+
+        // 2. Send Push Notification & Socket
+        const vendor = await Vendor.findById(booking.vendor);
+        if (vendor && vendor.fcmToken) {
+          await sendNotification(
+            vendor.fcmToken,
+            'Booking Cancelled ❌',
+            `User cancelled booking #${booking._id.toString().slice(-6)}`,
+            { bookingId: booking._id.toString(), type: 'booking_cancelled' }
+          );
+        }
+
+        // Socket
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`vendor_${booking.vendor}`).emit('booking_cancelled', {
+            bookingId: booking._id,
+            message: 'User cancelled the booking'
+          });
+        }
+      } catch (notifyError) {
+        console.error('Notify vendor cancel error:', notifyError);
+      }
+    }
+    res.json({ success: true, data: booking, message: 'Booking cancelled' });
   } catch (err) {
     next(err);
   }

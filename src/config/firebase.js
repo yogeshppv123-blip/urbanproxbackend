@@ -15,7 +15,7 @@ try {
     }
     // 2. Try Local File (Development)
     else {
-        const serviceAccountPath = path.join(__dirname, '../../service-account.json.json');
+        const serviceAccountPath = path.join(__dirname, '../../service-account.json');
         serviceAccount = require(serviceAccountPath);
         console.log('✅ Loaded Firebase credentials from Local File');
     }

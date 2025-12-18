@@ -14,6 +14,7 @@ router.get('/:id', bookingController.getBookingById);
 // User Routes
 router.post('/', bookingController.createBooking);
 router.get('/user/:userId', bookingController.getUserBookings);
+router.post('/:id/cancel', bookingController.cancelBookingByUser);
 
 // Vendor Routes
 router.post('/:id/accept', bookingController.acceptBooking);

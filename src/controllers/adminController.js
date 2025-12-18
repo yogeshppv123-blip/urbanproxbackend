@@ -149,87 +149,107 @@ exports.getDashboardStats = async (req, res) => {
         const activeCities = await City.countDocuments({ isActive: true });
 
         // Booking status breakdown
-        const pendingBookings = await Booking.countDocuments({ status: 'pending' });
-        const completedBookings = await Booking.countDocuments({ status: 'completed' });
-        const cancelledBookings = await Booking.countDocuments({ status: 'cancelled' });
+        // Booking status breakdown
+        const pendingBookings = await Booking.countDocuments({ status: { $in: ['pending', 'searching_vendor', 'waiting_vendor_response', 'waiting_user_approval'] } });
+        const completedBookings = await Booking.countDocuments({ status: { $in: ['completed', 'work_completed'] } });
+        const cancelledBookings = await Booking.countDocuments({ status: { $in: ['cancelled', 'cancelled_by_user', 'rejected', 'rejected_by_vendor', 'no_vendor_available'] } });
         const activeBookings = await Booking.countDocuments({ status: { $in: ['pending', 'confirmed', 'in_progress'] } });
 
         // Revenue calculations
-        const revenueData = await Booking.aggregate([
-            { $match: { status: 'completed' } },
-            { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-        ]);
-        const totalRevenue = revenueData.length > 0 ? revenueData[0].total : 0;
+        // 1. Total Revenue from Admin Wallet (Source of Truth)
+        const currentAdmin = await Admin.findById(req.admin._id);
+        const totalRevenue = currentAdmin ? (currentAdmin.totalRevenue || 0) : 0;
+
+        // 2. Helper to calculate commission (20% of Gross)
+        const COMMISSION_RATE = 0.20;
 
         // Today's stats
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayBookings = await Booking.countDocuments({ createdAt: { $gte: today } });
         const todayRevenueData = await Booking.aggregate([
-            { $match: { status: 'completed', createdAt: { $gte: today } } },
+            { $match: { status: { $in: ['completed', 'work_completed'] }, createdAt: { $gte: today } } },
             { $group: { _id: null, total: { $sum: '$totalAmount' } } }
         ]);
-        const todayRevenue = todayRevenueData.length > 0 ? todayRevenueData[0].total : 0;
+        const todayRevenue = todayRevenueData.length > 0 ? (todayRevenueData[0].total * COMMISSION_RATE) : 0;
 
         // This week's stats
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         const weeklyBookings = await Booking.countDocuments({ createdAt: { $gte: weekAgo } });
         const weeklyRevenueData = await Booking.aggregate([
-            { $match: { status: 'completed', createdAt: { $gte: weekAgo } } },
+            { $match: { status: { $in: ['completed', 'work_completed'] }, createdAt: { $gte: weekAgo } } },
             { $group: { _id: null, total: { $sum: '$totalAmount' } } }
         ]);
-        const weeklyRevenue = weeklyRevenueData.length > 0 ? weeklyRevenueData[0].total : 0;
+        const weeklyRevenue = weeklyRevenueData.length > 0 ? (weeklyRevenueData[0].total * COMMISSION_RATE) : 0;
 
         // This month's stats
         const monthAgo = new Date();
         monthAgo.setDate(monthAgo.getDate() - 30);
         const monthlyBookings = await Booking.countDocuments({ createdAt: { $gte: monthAgo } });
         const monthlyRevenueData = await Booking.aggregate([
-            { $match: { status: 'completed', createdAt: { $gte: monthAgo } } },
+            { $match: { status: { $in: ['completed', 'work_completed'] }, createdAt: { $gte: monthAgo } } },
             { $group: { _id: null, total: { $sum: '$totalAmount' } } }
         ]);
-        const monthlyRevenue = monthlyRevenueData.length > 0 ? monthlyRevenueData[0].total : 0;
+        const monthlyRevenue = monthlyRevenueData.length > 0 ? (monthlyRevenueData[0].total * COMMISSION_RATE) : 0;
 
-        // Revenue trend (last 7 days)
+        // Revenue trend (last 7 days - Commission based)
         const revenueTrend = await Booking.aggregate([
             {
                 $match: {
-                    status: 'completed',
+                    status: { $in: ['completed', 'work_completed'] },
                     createdAt: { $gte: weekAgo }
                 }
             },
             {
                 $group: {
                     _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    revenue: { $sum: '$totalAmount' },
+                    grossRevenue: { $sum: '$totalAmount' },
                     count: { $sum: 1 }
                 }
             },
-            { $sort: { _id: 1 } }
+            { $sort: { _id: 1 } },
+            {
+                $project: {
+                    _id: 1,
+                    count: 1,
+                    revenue: { $multiply: ['$grossRevenue', COMMISSION_RATE] } // Returns 20%
+                }
+            }
         ]);
 
-        // Top services by bookings
+        // Top services by bookings (Revenue displayed is commission or gross? Usually Gross for Service popularity, but let's keep Gross for context or switch to Commission? User asked for "revenue" in dashboard to be 20% cut. I will assume Top Services "Revenue" column might be Gross GMV, but to be consistent, I'll allow it to stay Gross or change to Commission. The Main KPI "Total Revenue" is fixed. Top Services usually shows GMV. I'll leave Top Services as is or update if needed. I'll update it to be safe.)
         const topServices = await Booking.aggregate([
             { $match: { status: { $ne: 'cancelled' } } },
             {
                 $group: {
                     _id: '$serviceName',
                     bookings: { $sum: 1 },
-                    revenue: { $sum: '$totalAmount' }
+                    grossRevenue: { $sum: '$totalAmount' }
                 }
             },
             { $sort: { bookings: -1 } },
-            { $limit: 5 }
+            { $limit: 5 },
+            {
+                $project: {
+                    _id: 1,
+                    bookings: 1,
+                    revenue: { $multiply: ['$grossRevenue', COMMISSION_RATE] }
+                }
+            }
         ]);
 
         // Get recent activity
-        const recentUsers = await User.find().sort({ createdAt: -1 }).limit(5).select('name email phone createdAt');
+        const recentUsers = await User.find().sort({ createdAt: -1 }).limit(5).select('name email phone createdAt').lean();
         const recentBookings = await Booking.find()
             .sort({ createdAt: -1 })
             .limit(10)
             .populate('user', 'name email phone')
-            .populate('vendor', 'businessName name phone');
+            .populate('vendor', 'businessName name phone')
+            .lean();
+
+        console.log('DEBUG DASHBOARD: recentBookings count:', recentBookings.length);
+        console.log('DEBUG DASHBOARD: recentUsers count:', recentUsers.length);
 
         res.json({
             success: true,
@@ -253,6 +273,7 @@ exports.getDashboardStats = async (req, res) => {
 
                     // Revenue
                     totalRevenue,
+                    revenue: totalRevenue,
                     todayRevenue,
                     weeklyRevenue,
                     monthlyRevenue,
